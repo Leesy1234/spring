@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="user"> <!-- mapper 파일의 이름 = namespace는 아무거나 써도 상관없음. mapper 안에 SQL문을 작성한다. -->
+
+	<insert id="insert" parameterType="chap07.user.UserVo" useGeneratedKeys="true">
+		INSERT INTO user (
+			id, pwd, name, regdate
+			) VALUES (
+			#{id}, md5(#{pwd}), #{name}, NOW()
+			)
+			<selectKey keyProperty="userno" resultType="int" order="AFTER">
+				SELECT last_insert_id()
+			</selectKey>
+	</insert>
+	<!-- md5(#{pwd}) : 비밀번호는 DB에 저장할 때, 비밀번호를 암호화해서 저장하는 MD5함수를 사용한다. -->
+	<!-- 가입할 때는 아이디, 비번, 이름만 갖고 오지만, insert를 하면 userno가 들어가있다. selectKey를 이용해 방금 실행된 SQL의 userno를 가져오게 한다. -->
+
+	<!-- 중복 여부는 조회 = select -->
+	<select id="idcheck" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM user WHERE id = #{id}
+	</select>
+	
+	<select id="login" parameterType="chap07.user.UserVo" resultType="chap07.user.UserVo">
+		SELECT * FROM user WHERE id = #{id} AND pwd = md5(#{pwd})
+	</select>
+	<!-- insert할 때 비밀번호를 암호화했으므로 md5함수를 이용한 값을 확인해야 한다. -->
+	
+	<insert id="insertSchool" parameterType="chap07.user.SchoolVo">
+		INSERT INTO school (
+			userno, school, year
+			) VALUES (
+			#{userno}, #{school}, #{year}
+			)
+	</insert>
+	<!-- # : ?역할로, PreparedStatement -->
+</mapper>

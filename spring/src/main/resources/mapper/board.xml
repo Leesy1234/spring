@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board"> <!-- mapper 파일의 이름 = namespace는 아무거나 써도 상관없음. mapper 안에 SQL문을 작성한다. -->
+
+	<!-- 컬럼명과 필드명을 매핑시키는 작업을 boardMap을 통해서 직접 한다. -->
+	<resultMap id="boardVoMap" type="chap07.BoardVo2">
+		<result column="boardno" property="num"/>
+		<result column="title" property="subject"/>
+		<result column="content" property="article"/>
+		<result column="writer" property="author"/>
+	</resultMap>
+	<!-- 코드의 중복을 줄이기 위해 -->
+	<sql id="boardWhere">
+		<where>
+			<if test="searchType == ''">
+				(title LIKE '%${searchWord}%' OR content LIKE '%${searchWord}%')
+			</if>
+			<if test="searchType != null and searchType !=''">
+				${searchType} LIKE '%${searchWord}%'
+			</if>
+			<if test="userno > 0"><!-- userno가 set이 된 경우라면 0보다 크다. BoardVo 필드에 초기화값 = 0, set을 하면 0이 아닌 값이 들어온다. -->
+				AND userno = ${userno}
+			</if>
+			<!-- if test조건에는 SQL이 들어가야 한다. jsp에서 loginInfo가 들어올 수는 없다. 앞의 검색조건이 없어도 mybatis가 자동으로 AND를 빼고 실행시켜준다. -->
+		</where>
+	</sql>
+	
+	<select id="count" resultType="int" parameterType="chap07.BoardVo">
+		SELECT COUNT(*) FROM board
+		<include refid="boardWhere"/>
+	</select>
+	<!-- 
+	Map으로도 가능함. 아래처럼 사용한다.
+	<select id="selectList" resultType="chap06.BoardVo" parameterType="java.util.Map">
+	 -->
+	<select id="selectList" resultType="chap07.BoardVo" parameterType="chap07.BoardVo">
+		SELECT * FROM board
+		<include refid="boardWhere"/>
+			ORDER BY 
+			<choose><!-- parameterType="java.util.Map"의 Map에 orderCond가 들어가 있어야 한다. -->
+				<when test="orderCond == 'title_asc'">title ASC</when>
+				<when test="orderCond == 'title_desc'">title DESC</when>
+				<when test="orderCond == 'regdate_asc'">regdate ASC</when>
+				<when test="orderCond == 'regdate_desc'">regdate DESC</when>
+				<otherwise>boardno DESC</otherwise>
+			</choose>
+			LIMIT ${startIdx}, 10
+	</select>
+	<!-- <where>태그를 사용하면, 조건이 있을 때는 mybatis가 where를 넣어주고, 없으면 넣지 않는다. 실제로 내가 검색한 검색어로 결과값이 나와야 하므로, ${searchWord}를 써야 한다. -->
+
+	<insert id="insert" parameterType="chap07.BoardVo">
+		INSERT INTO board (
+			title, content, writer, regdate, filename, userno
+		) values (
+			#{title}, #{content}, #{writer}, NOW(), #{filename}, #{userno}
+		)
+	</insert><!-- #{title} = mybatis가 자동적으로 PrepareStatement 기능을 해서 getTitle로 값을 가져온다. -->
+	
+	<select id="selectOne" parameterType="int" resultType="chap07.BoardVo"><!-- parameterType은 pk(1건을 조회할 때는 pk 사용)인 boardno가 들어와야 하는 자리이므로 원래는 Integer가 들어가야 하지만, mybatis가 처리한다. -->
+		SELECT * FROM board WHERE boardno = #{xxx}
+	</select>
+	<!-- 
+	<select id="selectOne2" parameterType="int" resultMap="boardVoMap">
+		SELECT * FROM board WHERE boardno = #{xxx} 
+	</select> -->
+	<!-- parameterType은 pk(1건을 조회할 때는 pk 사용)인 boardno가 들어와야 하는 자리이므로 원래는 Integer가 들어가야 하지만, mybatis가 처리한다. -->
+	<select id="selectOne2" parameterType="int" resultType="chap07.BoardVo"><!-- parameterType은 pk(1건을 조회할 때는 pk 사용)인 boardno가 들어와야 하는 자리이므로 원래는 Integer가 들어가야 하지만, mybatis가 처리한다. -->
+		SELECT boardno as num, title as subject, content as article, writer as author, regdate FROM board WHERE boardno = #{xxx}
+	</select>
+
+	<update id="update" parameterType="chap07.BoardVo">
+		UPDATE board SET title=#{title}, content=#{content}, writer=#{writer} WHERE boardno = #{boardno}
+		<!-- pk인 boardno는 절대로 중복될 수 없고, table에서 AI로 지정해두었기 때문에 insert하지 않아도 된다. #{writer}는 prepareStatement로, ? 대신 들어온다. #{xxx}로 써도 된다. -->
+	</update>
+	
+	<delete id="delete" parameterType="int">
+		DELETE FROM board WHERE boardno = #{boardno}
+		<!-- DELETE FROM board WHERE boardno = #{boardno} AND xxx= #{xxx}로 값이 2개 이상 들어와야 한다면 parameterType이 int가 들어올 수 없고, 객체가 들어와야 한다. -->
+	</delete>
+</mapper>
